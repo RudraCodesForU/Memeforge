@@ -96,63 +96,66 @@ export default function MemeEditor() {
         </div>
       </header>
 
-      <div className="flex h-[calc(100vh-4rem)]">
+      {/* Main Content */}
+      <div className="grid grid-cols-12 h-[calc(100vh-4rem)]">
         {/* Sidebar */}
-        <Sidebar canvasRef={canvasRef} />
+        <div className="col-span-3 border-r border-gray-200 bg-white overflow-y-auto">
+          <Sidebar canvasRef={canvasRef} />
+        </div>
 
-        {/* Main Editor */}
-        <main className="flex-1 flex flex-col">
+        {/* Main Editor Area */}
+        <div className="col-span-6 flex flex-col bg-gray-50">
           {/* Editor Toolbar */}
-          <div className="bg-white border-b border-gray-200 px-6 py-4">
+          <div className="bg-white border-b border-gray-200 px-4 py-3 flex-shrink-0">
             <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-4">
+              <div className="flex items-center space-x-3">
                 <Button
                   variant="ghost"
-                  size="icon"
+                  size="sm"
                   onClick={undo}
                   disabled={!history.canUndo}
                   className="text-gray-600 hover:text-primary"
                 >
-                  <Undo className="w-5 h-5" />
+                  <Undo className="w-4 h-4" />
                 </Button>
                 <Button
                   variant="ghost"
-                  size="icon"
+                  size="sm"
                   onClick={redo}
                   disabled={!history.canRedo}
                   className="text-gray-600 hover:text-primary"
                 >
-                  <Redo className="w-5 h-5" />
+                  <Redo className="w-4 h-4" />
                 </Button>
-                <Separator orientation="vertical" className="h-6" />
+                <Separator orientation="vertical" className="h-4" />
                 <Button
                   variant="ghost"
-                  size="icon"
+                  size="sm"
                   onClick={zoomOut}
                   className="text-gray-600 hover:text-primary"
                 >
-                  <ZoomOut className="w-5 h-5" />
+                  <ZoomOut className="w-4 h-4" />
                 </Button>
-                <span className="text-sm text-gray-600 font-medium min-w-[4rem] text-center">
+                <span className="text-xs text-gray-600 font-medium min-w-[3rem] text-center">
                   {Math.round(zoom * 100)}%
                 </span>
                 <Button
                   variant="ghost"
-                  size="icon"
+                  size="sm"
                   onClick={zoomIn}
                   className="text-gray-600 hover:text-primary"
                 >
-                  <ZoomIn className="w-5 h-5" />
+                  <ZoomIn className="w-4 h-4" />
                 </Button>
               </div>
 
               <div className="flex items-center space-x-2">
-                <div className="flex items-center space-x-2 bg-gray-100 rounded-lg p-1">
+                <div className="flex items-center space-x-1 bg-gray-100 rounded-md p-1">
                   <Button
                     variant={canvasSize === "square" ? "default" : "ghost"}
                     size="sm"
                     onClick={() => handleCanvasSizeChange("square")}
-                    className="text-xs"
+                    className="text-xs px-2 py-1 h-7"
                   >
                     Square
                   </Button>
@@ -160,7 +163,7 @@ export default function MemeEditor() {
                     variant={canvasSize === "landscape" ? "default" : "ghost"}
                     size="sm"
                     onClick={() => handleCanvasSizeChange("landscape")}
-                    className="text-xs"
+                    className="text-xs px-2 py-1 h-7"
                   >
                     Landscape
                   </Button>
@@ -168,7 +171,7 @@ export default function MemeEditor() {
                     variant={canvasSize === "portrait" ? "default" : "ghost"}
                     size="sm"
                     onClick={() => handleCanvasSizeChange("portrait")}
-                    className="text-xs"
+                    className="text-xs px-2 py-1 h-7"
                   >
                     Portrait
                   </Button>
@@ -178,32 +181,34 @@ export default function MemeEditor() {
           </div>
 
           {/* Canvas Area */}
-          <div className="flex-1 canvas-container bg-gray-100 p-8 overflow-auto">
-            <div className="flex items-center justify-center min-h-full">
-              <MemeCanvas ref={canvasRef} />
+          <div className="flex-1 flex items-center justify-center p-6 overflow-hidden">
+            <div className="max-w-full max-h-full flex items-center justify-center">
+              <MemeCanvas ref={canvasRef} className="shadow-lg" />
             </div>
           </div>
-
-          {/* Loading Overlay */}
-          {isLoading && (
-            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-              <div className="bg-white rounded-lg p-8 max-w-sm mx-4 text-center animate-fade-in">
-                <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full mx-auto mb-4"></div>
-                <h3 className="text-lg font-semibold text-gray-800 mb-2">Generating Your Meme</h3>
-                <p className="text-gray-600 text-sm">AI is working its magic...</p>
-              </div>
-            </div>
-          )}
-        </main>
+        </div>
 
         {/* Properties Panel */}
-        <PropertiesPanel 
-          selectedObject={selectedObject}
-          canvasRef={canvasRef}
-          onSave={saveMeme}
-          onClear={clearCanvas}
-        />
+        <div className="col-span-3 bg-white border-l border-gray-200 overflow-y-auto">
+          <PropertiesPanel 
+            selectedObject={selectedObject}
+            canvasRef={canvasRef}
+            onSave={saveMeme}
+            onClear={clearCanvas}
+          />
+        </div>
       </div>
+
+      {/* Loading Overlay */}
+      {isLoading && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-8 max-w-sm mx-4 text-center animate-fade-in">
+            <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full mx-auto mb-4"></div>
+            <h3 className="text-lg font-semibold text-gray-800 mb-2">Generating Your Meme</h3>
+            <p className="text-gray-600 text-sm">AI is working its magic...</p>
+          </div>
+        </div>
+      )}
 
       {/* Share Modal */}
       <ShareModal 
