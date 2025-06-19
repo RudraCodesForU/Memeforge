@@ -1,4 +1,4 @@
-import type { Express } from "express";
+import type { Express, Request } from "express";
 import { createServer, type Server } from "http";
 import multer from "multer";
 import { storage } from "./storage";
@@ -17,7 +17,7 @@ const upload = multer({
   limits: {
     fileSize: 10 * 1024 * 1024, // 10MB limit
   },
-  fileFilter: (req, file, cb) => {
+  fileFilter: (req: any, file: Express.Multer.File, cb: any) => {
     if (file.mimetype.startsWith('image/')) {
       cb(null, true);
     } else {
@@ -85,7 +85,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // File Upload API
-  app.post("/api/upload", upload.single('file'), async (req, res) => {
+  app.post("/api/upload", upload.single('file'), async (req: Request & { file?: Express.Multer.File }, res) => {
     try {
       if (!req.file) {
         return res.status(400).json({ message: "No file uploaded" });

@@ -65,7 +65,7 @@ export class MemStorage implements IStorage {
         textAreas: [
           { x: 250, y: 100, width: 200, height: 50 },
           { x: 250, y: 250, width: 200, height: 50 }
-        ],
+        ] as any,
         isPopular: true
       },
       {
@@ -77,7 +77,7 @@ export class MemStorage implements IStorage {
           { x: 50, y: 50, width: 150, height: 30 },
           { x: 200, y: 50, width: 150, height: 30 },
           { x: 350, y: 50, width: 150, height: 30 }
-        ],
+        ] as any,
         isPopular: true
       },
       {
@@ -238,7 +238,12 @@ export class MemStorage implements IStorage {
     const meme: Meme = {
       ...insertMeme,
       id,
-      createdAt: new Date()
+      createdAt: new Date(),
+      templateId: insertMeme.templateId || null,
+      canvasData: insertMeme.canvasData || null,
+      metadata: insertMeme.metadata || null,
+      tags: insertMeme.tags || null,
+      isPublic: insertMeme.isPublic || null
     };
     this.memes.set(id, meme);
     return meme;
@@ -271,8 +276,13 @@ export class MemStorage implements IStorage {
   }
 
   async createTemplate(template: InsertTemplate): Promise<Template> {
-    this.templates.set(template.id, template);
-    return template;
+    const fullTemplate: Template = {
+      ...template,
+      textAreas: template.textAreas || null,
+      isPopular: template.isPopular || null
+    };
+    this.templates.set(template.id, fullTemplate);
+    return fullTemplate;
   }
 
   // Sticker operations
@@ -289,8 +299,12 @@ export class MemStorage implements IStorage {
   }
 
   async createSticker(sticker: InsertSticker): Promise<Sticker> {
-    this.stickers.set(sticker.id, sticker);
-    return sticker;
+    const fullSticker: Sticker = {
+      ...sticker,
+      tags: sticker.tags || null
+    };
+    this.stickers.set(sticker.id, fullSticker);
+    return fullSticker;
   }
 
   // Upload operations

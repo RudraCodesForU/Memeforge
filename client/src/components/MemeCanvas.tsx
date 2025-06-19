@@ -1,5 +1,4 @@
-import { forwardRef, useEffect, useRef, useImperativeHandle } from "react";
-import { fabric } from "fabric";
+import { forwardRef, useEffect, useRef, useImperativeHandle, useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 
 interface MemeCanvasProps {
@@ -7,7 +6,7 @@ interface MemeCanvasProps {
 }
 
 export interface MemeCanvasRef {
-  getCanvas: () => fabric.Canvas | null;
+  getCanvas: () => HTMLCanvasElement | null;
   addText: (text: string, options?: any) => void;
   addImage: (imageUrl: string, options?: any) => void;
   exportAsDataURL: (format?: string) => string;
@@ -15,172 +14,155 @@ export interface MemeCanvasRef {
   renderAll: () => void;
 }
 
+interface CanvasElement {
+  type: 'text' | 'image';
+  content: string;
+  x: number;
+  y: number;
+  fontSize?: number;
+  color?: string;
+  strokeColor?: string;
+  strokeWidth?: number;
+  width?: number;
+  height?: number;
+}
+
 const MemeCanvas = forwardRef<MemeCanvasRef, MemeCanvasProps>(({ className }, ref) => {
   const canvasElementRef = useRef<HTMLCanvasElement>(null);
-  const canvasRef = useRef<fabric.Canvas | null>(null);
+  const [elements, setElements] = useState<CanvasElement[]>([]);
+  const [backgroundImage, setBackgroundImage] = useState<HTMLImageElement | null>(null);
   const { toast } = useToast();
+
+  const drawCanvas = () => {
+    if (!canvasElementRef.current) return;
+    
+    const canvas = canvasElementRef.current;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    // Clear canvas
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    
+    // Set background
+    ctx.fillStyle = "#f3f4f6";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    
+    // Draw background image if exists
+    if (backgroundImage) {
+      ctx.drawImage(backgroundImage, 0, 0, canvas.width, canvas.height);
+    }
+    
+    // Draw elements
+    elements.forEach(element => {
+      if (element.type === 'text') {
+        ctx.save();
+        ctx.fillStyle = element.color || "#ffffff";
+        ctx.font = `${element.fontSize || 32}px Inter, Arial, sans-serif`;
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        
+        // Draw stroke if specified
+        if (element.strokeColor && element.strokeWidth) {
+          ctx.strokeStyle = element.strokeColor;
+          ctx.lineWidth = element.strokeWidth;
+          ctx.strokeText(element.content, element.x, element.y);
+        }
+        
+        ctx.fillText(element.content, element.x, element.y);
+        ctx.restore();
+      }
+    });
+    
+    // Show placeholder if no elements
+    if (elements.length === 0 && !backgroundImage) {
+      ctx.fillStyle = "#6b7280";
+      ctx.font = "24px Inter, sans-serif";
+      ctx.textAlign = "center";
+      ctx.fillText("Start creating your meme!", canvas.width / 2, canvas.height / 2 - 25);
+      
+      ctx.fillStyle = "#9ca3af";
+      ctx.font = "16px Inter, sans-serif";
+      ctx.fillText("Select a template or upload your own image", canvas.width / 2, canvas.height / 2 + 25);
+    }
+  };
 
   useEffect(() => {
     if (!canvasElementRef.current) return;
-
-    // Initialize Fabric.js canvas
-    const canvas = new fabric.Canvas(canvasElementRef.current, {
-      width: 500,
-      height: 500,
-      backgroundColor: "#f3f4f6",
-      selection: true,
-      preserveObjectStacking: true,
-    });
-
-    canvasRef.current = canvas;
-
-    // Add default placeholder
-    const placeholderText = new fabric.Text("Start creating your meme!", {
-      left: 250,
-      top: 200,
-      originX: "center",
-      originY: "center",
-      fontSize: 24,
-      fontFamily: "Inter",
-      fill: "#6b7280",
-      selectable: false,
-    });
-
-    const instructionText = new fabric.Text("Select a template or upload your own image", {
-      left: 250,
-      top: 240,
-      originX: "center",
-      originY: "center",
-      fontSize: 14,
-      fontFamily: "Inter",
-      fill: "#9ca3af",
-      selectable: false,
-    });
-
-    canvas.add(placeholderText, instructionText);
-    canvas.renderAll();
-
-    // Event listeners
-    canvas.on("selection:created", (e) => {
-      const activeObject = e.selected?.[0];
-      if (activeObject) {
-        canvas.fire("object:selected", { target: activeObject });
-      }
-    });
-
-    canvas.on("selection:updated", (e) => {
-      const activeObject = e.selected?.[0];
-      if (activeObject) {
-        canvas.fire("object:selected", { target: activeObject });
-      }
-    });
-
-    canvas.on("selection:cleared", () => {
-      canvas.fire("object:deselected");
-    });
-
-    return () => {
-      canvas.dispose();
-    };
-  }, []);
+    
+    const canvas = canvasElementRef.current;
+    canvas.width = 500;
+    canvas.height = 500;
+    
+    drawCanvas();
+  }, [elements, backgroundImage]);
 
   useImperativeHandle(ref, () => ({
-    getCanvas: () => canvasRef.current,
+    getCanvas: () => canvasElementRef.current,
     
     addText: (text: string, options = {}) => {
-      if (!canvasRef.current) return;
-
-      // Remove placeholder texts if they exist
-      const objects = canvasRef.current.getObjects();
-      objects.forEach(obj => {
-        if (obj.selectable === false && obj.type === "text") {
-          canvasRef.current?.remove(obj);
-        }
-      });
-
-      const textObject = new fabric.Text(text, {
-        left: 250,
-        top: 100,
-        originX: "center",
-        originY: "center",
+      const newElement: CanvasElement = {
+        type: 'text',
+        content: text,
+        x: 250,
+        y: 100 + (elements.filter(e => e.type === 'text').length * 80),
         fontSize: 32,
-        fontFamily: "Inter",
-        fontWeight: "bold",
-        fill: "#ffffff",
-        stroke: "#000000",
+        color: "#ffffff",
+        strokeColor: "#000000",
         strokeWidth: 2,
-        textAlign: "center",
         ...options,
+      };
+      
+      setElements(prev => [...prev, newElement]);
+      toast({
+        title: "Text added",
+        description: "Text has been added to your meme",
       });
-
-      canvasRef.current.add(textObject);
-      canvasRef.current.setActiveObject(textObject);
-      canvasRef.current.renderAll();
     },
     
     addImage: (imageUrl: string, options = {}) => {
-      if (!canvasRef.current) return;
-
-      // Remove placeholder texts if they exist
-      const objects = canvasRef.current.getObjects();
-      objects.forEach(obj => {
-        if (obj.selectable === false && obj.type === "text") {
-          canvasRef.current?.remove(obj);
-        }
-      });
-
-      fabric.Image.fromURL(
-        imageUrl,
-        (img) => {
-          if (!canvasRef.current || !img) return;
-
-          // Scale image to fit canvas
-          const canvasWidth = canvasRef.current.getWidth();
-          const canvasHeight = canvasRef.current.getHeight();
-          
-          const scale = Math.min(
-            canvasWidth / (img.width || 1),
-            canvasHeight / (img.height || 1)
-          );
-
-          img.set({
-            scaleX: scale,
-            scaleY: scale,
-            left: canvasWidth / 2,
-            top: canvasHeight / 2,
-            originX: "center",
-            originY: "center",
-            ...options,
-          });
-
-          canvasRef.current.add(img);
-          canvasRef.current.sendToBack(img);
-          canvasRef.current.renderAll();
-        },
-        { crossOrigin: "anonymous" }
-      );
+      const img = new Image();
+      img.crossOrigin = "anonymous";
+      img.onload = () => {
+        setBackgroundImage(img);
+        toast({
+          title: "Image added",
+          description: "Image has been added to your meme",
+        });
+      };
+      img.onerror = () => {
+        toast({
+          title: "Error",
+          description: "Failed to load image",
+          variant: "destructive",
+        });
+      };
+      img.src = imageUrl;
     },
     
-    exportAsDataURL: (format = "png") => {
-      if (!canvasRef.current) return "";
-      return canvasRef.current.toDataURL({ format, quality: 1 });
+    exportAsDataURL: (format = 'png') => {
+      if (!canvasElementRef.current) return '';
+      return canvasElementRef.current.toDataURL(`image/${format}`);
     },
     
     setDimensions: (dimensions: { width: number; height: number }) => {
-      if (!canvasRef.current) return;
-      canvasRef.current.setDimensions(dimensions);
+      if (!canvasElementRef.current) return;
+      canvasElementRef.current.width = dimensions.width;
+      canvasElementRef.current.height = dimensions.height;
+      drawCanvas();
     },
     
     renderAll: () => {
-      if (canvasRef.current) {
-        canvasRef.current.renderAll();
-      }
+      drawCanvas();
     },
   }));
 
   return (
-    <div className={`bg-white rounded-lg shadow-xl ${className}`}>
-      <canvas ref={canvasElementRef} className="rounded-lg" />
+    <div className={`border border-gray-300 rounded-lg overflow-hidden ${className || ''}`}>
+      <canvas
+        ref={canvasElementRef}
+        className="block max-w-full h-auto"
+        style={{ background: '#f3f4f6' }}
+      />
     </div>
   );
 });

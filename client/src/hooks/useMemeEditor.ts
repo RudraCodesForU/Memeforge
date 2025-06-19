@@ -73,44 +73,26 @@ export function useMemeEditor() {
     },
   });
 
-  // Set up canvas event listeners
+  // Set up canvas listeners (simplified for HTML5 canvas)
   useEffect(() => {
-    const canvas = canvasRef.current?.getCanvas();
-    if (!canvas) return;
-
-    const handleSelection = (e: any) => {
-      setSelectedObject(e.target);
-    };
-
-    const handleDeselection = () => {
-      setSelectedObject(null);
-    };
-
-    const handleCanvasChange = () => {
+    // For the simplified canvas implementation, we'll handle updates differently
+    const updateCanvasData = () => {
       const dataUrl = canvasRef.current?.exportAsDataURL();
       if (dataUrl) {
         setCanvasData(dataUrl);
       }
       
-      // Update history state (simplified)
       setHistory({
-        canUndo: true, // In a real app, you'd track actual history
+        canUndo: true,
         canRedo: false
       });
     };
 
-    canvas.on("object:selected", handleSelection);
-    canvas.on("object:deselected", handleDeselection);
-    canvas.on("object:modified", handleCanvasChange);
-    canvas.on("object:added", handleCanvasChange);
-    canvas.on("object:removed", handleCanvasChange);
-
+    // Update canvas data periodically or on user interactions
+    const interval = setInterval(updateCanvasData, 1000);
+    
     return () => {
-      canvas.off("object:selected", handleSelection);
-      canvas.off("object:deselected", handleDeselection);
-      canvas.off("object:modified", handleCanvasChange);
-      canvas.off("object:added", handleCanvasChange);
-      canvas.off("object:removed", handleCanvasChange);
+      clearInterval(interval);
     };
   }, []);
 
@@ -133,22 +115,22 @@ export function useMemeEditor() {
   const zoomIn = useCallback(() => {
     const newZoom = Math.min(zoom * 1.2, 3);
     setZoom(newZoom);
-    const canvas = canvasRef.current?.getCanvas();
-    if (canvas) {
-      canvas.setZoom(newZoom);
-      canvas.renderAll();
-    }
-  }, [zoom]);
+    
+    toast({
+      title: "Zoomed In",
+      description: `Zoom level: ${Math.round(newZoom * 100)}%`,
+    });
+  }, [zoom, toast]);
 
   const zoomOut = useCallback(() => {
     const newZoom = Math.max(zoom / 1.2, 0.1);
     setZoom(newZoom);
-    const canvas = canvasRef.current?.getCanvas();
-    if (canvas) {
-      canvas.setZoom(newZoom);
-      canvas.renderAll();
-    }
-  }, [zoom]);
+    
+    toast({
+      title: "Zoomed Out", 
+      description: `Zoom level: ${Math.round(newZoom * 100)}%`,
+    });
+  }, [zoom, toast]);
 
   const exportMeme = useCallback(async (options = {}) => {
     const dataUrl = canvasRef.current?.exportAsDataURL();
@@ -187,10 +169,10 @@ export function useMemeEditor() {
     const memeData = {
       title: `Meme ${new Date().toLocaleString()}`,
       imageUrl: dataUrl,
-      canvasData: canvas ? JSON.stringify(canvas.toJSON()) : null,
+      canvasData: dataUrl, // Use the canvas data URL directly
       metadata: {
-        width: canvas?.getWidth(),
-        height: canvas?.getHeight(),
+        width: canvas?.width || 500,
+        height: canvas?.height || 500,
         zoom
       },
       tags: ["custom"],
@@ -203,9 +185,12 @@ export function useMemeEditor() {
   const clearCanvas = useCallback(() => {
     const canvas = canvasRef.current?.getCanvas();
     if (canvas) {
-      canvas.clear();
-      canvas.backgroundColor = "#f3f4f6";
-      canvas.renderAll();
+      const ctx = canvas.getContext('2d');
+      if (ctx) {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.fillStyle = "#f3f4f6";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+      }
       setSelectedObject(null);
       setCanvasData("");
       
